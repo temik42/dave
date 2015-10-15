@@ -24,26 +24,23 @@ class Solver():
         return cl.Program(self.ctx, fstr % kernel_params).build()  
         
     def loadData(self, A, b):
-
-        mf = cl.mem_flags
-        
+        mf = cl.mem_flags        
         self.A = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=A)
         self.b = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=b)
         self.x = cl.Buffer(self.ctx, mf.READ_WRITE, b.nbytes)
-
         self.queue.finish()
-        self.out = np.zeros((self.shape[0],)+self.shape[2:5], dtype = np.float32)
-        
 
-  
+        
     def run(self):        
         self.program.Lusol(self.queue, self.shape[2:5], None, self.A, self.b, self.x)
         cl.enqueue_barrier(self.queue)
-        cl.enqueue_read_buffer(self.queue, self.x, self.out).wait()
-        self.queue.finish()
         return self
             
-
+    def get(self):
+        self.out = np.zeros((self.shape[0],)+self.shape[2:5], dtype = np.float32)
+        cl.enqueue_read_buffer(self.queue, self.x, self.out).wait()
+        self.queue.finish()
+        return self.out
 
      
 
