@@ -10,7 +10,7 @@ __constant float TINY = 1e-40;
 
 float Abs(float X)
 {
-    if (X >= 0.f) return X; else return (-X);
+    return X >= 0.f ? X : -X;
 }
 
 #define lu(i,j) A[idx + (i*HY + j)*NX*NY*NZ]
@@ -18,7 +18,7 @@ float Abs(float X)
 #define x(i) X[idx + i*NX*NY*NZ]
 
 __kernel //__attribute__((reqd_work_group_size(BLOCK_SIZE,BLOCK_SIZE,BLOCK_SIZE)))
-void Lusol(__global float* A, __global float* B, __global float* X)
+void Solve(__global float* A, __global float* B, __global float* X, float tsh)
 {  
     unsigned int ix[3] = {get_global_id(0),get_global_id(1),get_global_id(2)};
     unsigned int idx = ix[0]*bg[0]+ix[1]*bg[1]+ix[2]*bg[2];
@@ -35,6 +35,8 @@ void Lusol(__global float* A, __global float* B, __global float* X)
         big = 0.f;
         for (j=0; j<HX; j++)
             if ((temp=Abs(lu(i,j))) > big) big = temp;
+        if (big == 0.f)
+            big = 1.f;
         vv[i] = 1.f/big;
     }
     

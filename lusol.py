@@ -3,15 +3,15 @@ import numpy as np
 
 
 class Solver():
-    def __init__(self, A, b):
+    def __init__(self, A, b, method = "lusol", threshold = 1.):
         self.shape = A.shape
         self.block_size = 8;
         self.block_shape = (self.block_size, self.block_size, self.block_size)
         self.clinit()
         self.loadData(A, b)
-        self.program = self.loadProgram("lusol.cl")
+        self.program = self.loadProgram(method+".cl")
+        self.threshold = np.float32(threshold)
 
-        
     def clinit(self):
         self.ctx = cl.create_some_context()       
         self.queue = cl.CommandQueue(self.ctx) 
@@ -29,16 +29,15 @@ class Solver():
         self.b = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=b)
         self.x = cl.Buffer(self.ctx, mf.READ_WRITE, b.nbytes)
         self.queue.finish()
-
-        
+   
     def run(self):        
-        self.program.Lusol(self.queue, self.shape[2:5], None, self.A, self.b, self.x)
+        self.program.Solve(self.queue, self.shape[2:5], None, self.A, self.b, self.x, self.threshold)
         cl.enqueue_barrier(self.queue)
         return self
             
     def get(self):
         self.out = np.zeros((self.shape[0],)+self.shape[2:5], dtype = np.float32)
-        cl.enqueue_read_buffer(self.queue, self.x, self.out).wait()
+        cl.enqueue_read_buffer(self.queue, self.x, self.out)#.wait()
         self.queue.finish()
         return self.out
 
